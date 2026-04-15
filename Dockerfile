@@ -1,7 +1,10 @@
 # Use official Nginx image as base (for serving static content)
-FROM nginx:alpine
+FROM nginx:alpine3.23-slim
 
-# Copy our app files into the default Nginx document root (/usr/share/nginx/html)
+# Clean default Nginx static files
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy only the files needed for the static website
 COPY index.html /usr/share/nginx/html/
 COPY elements.html /usr/share/nginx/html/
 COPY generic.html /usr/share/nginx/html/
@@ -11,8 +14,8 @@ COPY images /usr/share/nginx/html/images
 COPY LICENSE.txt /usr/share/nginx/html/
 COPY README.txt /usr/share/nginx/html/
 
-# Expose port 80 for HTTP access (Nginx listens on port 80 by default)
+# Expose port 80 for HTTP access
 EXPOSE 80
 
-# Run command when container starts up
+# Start Nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]
