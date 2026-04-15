@@ -1,0 +1,48 @@
+name: CD Prod Pipeline
+
+on:
+  push:
+    branches:
+      - prod
+
+jobs:
+  security_scan:
+    name: Security Scan Before Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          vuln-type: 'os,library'
+          scanners: 'vuln,secret'
+
+  deploy_prod:
+    name: Deploy on runner_prod
+    runs-on: self-hosted
+    needs: security_scan
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Stop old container if exists
+        shell: powershell
+        run: |
+          docker stop intranet-prod 2>$null
+          docker rm intranet-prod 2>$null
+
+      - name: Build production image
+        shell: powershell
+        run: docker build -t intranet-newdeal:prod .
+
+      - name: Run production container on port 80
+        shell: powershell
+        run: docker run -d -p 80:80 --name intranet-prod intranet-newdeal:prod
