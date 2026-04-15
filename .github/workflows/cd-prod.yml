@@ -39,15 +39,19 @@ jobs:
 
       - name: Stop old container if exists
         run: |
-          docker stop intranet-prod
-          if ($LASTEXITCODE -ne 0) {
+          $container = docker ps -a -q -f "name=intranet-prod"
+          if ($container) {
+            docker stop intranet-prod
+          } else {
             Write-Host "Container intranet-prod non trouvé ou déjà arrêté"
           }
 
       - name: Remove old container if exists
         run: |
-          docker rm intranet-prod
-          if ($LASTEXITCODE -ne 0) {
+          $container = docker ps -a -q -f "name=intranet-prod"
+          if ($container) {
+            docker rm intranet-prod
+          } else {
             Write-Host "Container intranet-prod non trouvé"
           }
 
