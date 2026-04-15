@@ -6,43 +6,42 @@ on:
       - prod
 
 jobs:
-  security_scan:
+  security_scan_before_deploy:
     name: Security Scan Before Deploy
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Trivy scan
+      - name: Pull Docker image
+        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
+
+      - name: Run Trivy scan before deploy
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          exit-code: '0'
-          vuln-type: 'os,library'
-          scanners: 'vuln,secret'
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
 
   deploy_prod:
     name: Deploy on runner_prod
-    runs-on: self-hosted
-    needs: security_scan
+    runs-on: runner_prod
+    needs: security_scan_before_deploy
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Pull Docker image on prod runner
+        run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
 
       - name: Stop old container if exists
-        shell: powershell
-        run: |
-          docker stop intranet-prod 2>$null; if ($LASTEXITCODE -ne 0) { Write-Host "No existing container to stop" }
-          docker rm intranet-prod 2>$null; if ($LASTEXITCODE -ne 0) { Write-Host "No existing container to remove" }
+        run: docker stop intranet-prod || true
 
-      - name: Build production image
-        shell: powershell
-        run: docker build -t intranet-newdeal:prod .
+      - name: Remove old container if exists
+        run: docker rm intranet-prod || true
 
-      - name: Run production container on port 8081
-        shell: powershell
-        run: docker run -d -p 8081:80 --name intranet-prod intranet-newdeal:prod
+      - name: Run new container
+        run: docker run -d -p 8081:80 --name intranet-prod ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
