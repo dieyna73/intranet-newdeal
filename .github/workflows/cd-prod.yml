@@ -38,10 +38,18 @@ jobs:
         run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
 
       - name: Stop old container if exists
-        run: docker stop intranet-prod || true
+        run: |
+          docker stop intranet-prod
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Container intranet-prod non trouvé ou déjà arrêté"
+          }
 
       - name: Remove old container if exists
-        run: docker rm intranet-prod || true
+        run: |
+          docker rm intranet-prod
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Container intranet-prod non trouvé"
+          }
 
       - name: Run new container
         run: docker run -d -p 8081:80 --name intranet-prod ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
