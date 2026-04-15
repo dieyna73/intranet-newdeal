@@ -52,4 +52,4 @@ jobs:
           }
 
       - name: Run new container
-        run: docker run -d -p 8081:80 --name intranet-prod ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
+        run: docker run -d --restart always -p 8081:80 --name intranet-prod ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
