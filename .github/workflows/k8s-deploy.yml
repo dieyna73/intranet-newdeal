@@ -1,43 +1,48 @@
-name: Deploy Kubernetes – branche k8S
+name: Deploy to Kubernetes
 
 on:
   push:
-    branches: [k8S]
+    branches:
+      - k8s
 
 jobs:
-  deploy-k8s:
-    name: Déploiement Kubernetes
-    runs-on: [self-hosted, runner_prod]
+  deploy_k8s:
+    name: Deploy on Kubernetes
+    runs-on: self-hosted
+
     steps:
-      - name: Checkout du code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker image
-        run: |
-          docker build -t intranet-newdeal:latest .
-
-      - name: Vérifier kubectl
+      - name: Verify kubectl
+        shell: powershell
         run: kubectl version --client
 
-      - name: Vérifier accès au cluster
-        run: kubectl cluster-info
+      - name: Apply Deployment
+        shell: powershell
+        run: kubectl apply -f k8s/deployment.yaml
 
-      - name: Appliquer les manifests
+      - name: Apply Service
+        shell: powershell
+        run: kubectl apply -f k8s/service.yaml
+
+      - name: Check pods
+        shell: powershell
+        run: kubectl get pods
+
+      - name: Check services
+        shell: powershell
+        run: kubectl get svc
+
+      - name: Port-forward and test application
+        shell: powershell
         run: |
-          kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/service.yaml
-
-      - name: Attendre le déploiement
-        run: kubectl rollout status deployment/intranet-newdeal --timeout=60s
-
-      - name: Vérifier les pods
-        run: kubectl get pods -l app=intranet-newdeal
-
-      - name: Vérifier le service
-        run: kubectl get service intranet-newdeal-service
-
-      - name: Port-forward pour validation
-        run: |
-          kubectl port-forward service/intranet-newdeal-service 8080:80 &
-          sleep 5
-          curl -f http://localhost:8080 && echo "✅ Application accessible !"
+          Start-Process -NoNewWindow -FilePath "kubectl" -ArgumentList "port-forward service/intranet-newdeal-service 8080:80"
+          Start-Sleep -Seconds 10
+          try {
+            Invoke-WebRequest -Uri "http://localhost:8080" -UseBasicParsing
+            Write-Host "Application accessible !"
+          } catch {
+            Write-Error "Application non accessible !"
+            exit 1
+          }
