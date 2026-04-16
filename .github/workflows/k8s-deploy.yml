@@ -1,0 +1,43 @@
+name: Deploy Kubernetes – branche k8S
+
+on:
+  push:
+    branches: [k8S]
+
+jobs:
+  deploy-k8s:
+    name: Déploiement Kubernetes
+    runs-on: [self-hosted, runner_prod]
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t intranet-newdeal:latest .
+
+      - name: Vérifier kubectl
+        run: kubectl version --client
+
+      - name: Vérifier accès au cluster
+        run: kubectl cluster-info
+
+      - name: Appliquer les manifests
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+
+      - name: Attendre le déploiement
+        run: kubectl rollout status deployment/intranet-newdeal --timeout=60s
+
+      - name: Vérifier les pods
+        run: kubectl get pods -l app=intranet-newdeal
+
+      - name: Vérifier le service
+        run: kubectl get service intranet-newdeal-service
+
+      - name: Port-forward pour validation
+        run: |
+          kubectl port-forward service/intranet-newdeal-service 8080:80 &
+          sleep 5
+          curl -f http://localhost:8080 && echo "✅ Application accessible !"

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: intranet-newdeal
+  labels:
+    app: intranet-newdeal
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: intranet-newdeal
+  template:
+    metadata:
+      labels:
+        app: intranet-newdeal
+    spec:
+      containers:
+        - name: nginx
+          image: intranet-newdeal:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
